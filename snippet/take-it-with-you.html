@@ -1,0 +1,292 @@
+<!--
+  Take It With You — drop-in web snippet.
+  https://github.com/annetklo/take-it-with-you
+
+  Adds "Copy for LLM" and "Download MD" buttons to your page so readers
+  can take the content into their AI assistant in one click.
+
+  Vanilla HTML/CSS/JS. No dependencies. No build step. Self-contained.
+
+  USAGE
+    Paste this entire block near the bottom of your page's main content,
+    after the reading flow, before the global site footer.
+
+  CONFIGURATION (data-* on the .tiwy element)
+    data-source="<css-selector>"   Root to serialize. Default: "main".
+    data-title="<string>"          Override the document title.
+    data-filename="<slug>"         Override the .md filename.
+    data-author="<string>"         Optional author line in the export.
+
+  BRANDING
+    Override CSS variables on .tiwy to match your brand. See README.
+
+  LICENSE
+    MIT.
+-->
+<div class="tiwy" data-source="main">
+  <span class="tiwy__label">TAKE IT WITH YOU</span>
+  <button type="button" class="tiwy__btn" data-action="copy" aria-label="Copy this page as Markdown for an LLM">
+    <span aria-hidden="true">⧉</span> Copy for LLM
+  </button>
+  <button type="button" class="tiwy__btn" data-action="download" aria-label="Download this page as a Markdown file">
+    <span aria-hidden="true">↓</span> Download MD
+  </button>
+  <span class="tiwy__status" role="status" aria-live="polite"></span>
+</div>
+
+<style>
+  .tiwy {
+    --tiwy-accent: #2563eb;
+    --tiwy-text: #1f2937;
+    --tiwy-muted: #6b7280;
+    --tiwy-border: rgba(0, 0, 0, 0.12);
+    --tiwy-bg: #ffffff;
+    --tiwy-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --tiwy-label-font: var(--tiwy-font);
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px 20px;
+    margin: 48px 0 24px;
+    border: 1px solid var(--tiwy-border);
+    border-radius: 10px;
+    font-family: var(--tiwy-font);
+    color: var(--tiwy-text);
+    background: var(--tiwy-bg);
+  }
+  .tiwy__label {
+    font-family: var(--tiwy-label-font);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--tiwy-muted);
+    margin-right: 4px;
+  }
+  .tiwy__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--tiwy-border);
+    border-radius: 6px;
+    background: var(--tiwy-bg);
+    color: var(--tiwy-text);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .tiwy__btn:hover,
+  .tiwy__btn:focus-visible {
+    border-color: var(--tiwy-accent);
+    color: var(--tiwy-accent);
+    outline: none;
+  }
+  .tiwy__status {
+    font-size: 13px;
+    color: var(--tiwy-muted);
+    min-height: 1em;
+  }
+</style>
+
+<script>
+(function () {
+  document.querySelectorAll(".tiwy").forEach(setup);
+
+  function setup(root) {
+    const sourceSel = root.getAttribute("data-source") || "main";
+    const titleOverride = root.getAttribute("data-title");
+    const filenameOverride = root.getAttribute("data-filename");
+    const author = root.getAttribute("data-author");
+    const status = root.querySelector(".tiwy__status");
+
+    root.querySelector('[data-action="copy"]').addEventListener("click", async () => {
+      const md = buildMarkdown(sourceSel, titleOverride, author);
+      try {
+        await navigator.clipboard.writeText(md);
+        flash(status, "Copied. Paste into your LLM.");
+      } catch (e) {
+        fallbackCopy(md);
+        flash(status, "Copied.");
+      }
+    });
+
+    root.querySelector('[data-action="download"]').addEventListener("click", () => {
+      const md = buildMarkdown(sourceSel, titleOverride, author);
+      const name = (filenameOverride || slugify(getTitle(titleOverride))) + ".md";
+      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      flash(status, "Downloaded " + name);
+    });
+  }
+
+  function buildMarkdown(sourceSel, titleOverride, author) {
+    const root = document.querySelector(sourceSel) || document.body;
+    const title = getTitle(titleOverride);
+    const date = new Date().toISOString().slice(0, 10);
+    const canonical = document.querySelector('link[rel="canonical"]')?.href || location.href;
+
+    const lines = [];
+    lines.push("# " + title);
+    lines.push("");
+    lines.push("_" + date + (author ? " — " + author : "") + "_");
+    lines.push("");
+    lines.push(serialize(root).trim());
+    lines.push("");
+    lines.push("---");
+    lines.push("Source: " + canonical);
+    return lines.join("\n");
+  }
+
+  function getTitle(override) {
+    if (override) return override;
+    const h1 = document.querySelector("h1");
+    return (h1 && h1.textContent.trim()) || document.title || "Untitled";
+  }
+
+  function serialize(node) {
+    const out = [];
+    walk(node, out, { listDepth: 0 });
+    return out.join("");
+  }
+
+  function walk(node, out, ctx) {
+    if (!node) return;
+    if (node.nodeType === Node.TEXT_NODE) {
+      out.push(node.textContent.replace(/\s+/g, " "));
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    const tag = node.tagName.toLowerCase();
+    if (shouldSkip(node, tag)) return;
+
+    switch (tag) {
+      case "h1": case "h2": case "h3": case "h4": case "h5": case "h6": {
+        const level = parseInt(tag[1], 10);
+        out.push("\n\n" + "#".repeat(level) + " " + text(node) + "\n");
+        return;
+      }
+      case "p": {
+        out.push("\n\n" + inline(node) + "\n");
+        return;
+      }
+      case "br": { out.push("  \n"); return; }
+      case "hr": { out.push("\n\n---\n"); return; }
+      case "strong": case "b": { out.push("**" + inline(node) + "**"); return; }
+      case "em": case "i": { out.push("*" + inline(node) + "*"); return; }
+      case "code": {
+        if (node.parentElement && node.parentElement.tagName.toLowerCase() === "pre") {
+          out.push(text(node));
+        } else {
+          out.push("`" + text(node) + "`");
+        }
+        return;
+      }
+      case "pre": {
+        out.push("\n\n```\n" + text(node) + "\n```\n");
+        return;
+      }
+      case "blockquote": {
+        const inner = serialize(node).trim().split("\n").map(l => "> " + l).join("\n");
+        out.push("\n\n" + inner + "\n");
+        return;
+      }
+      case "a": {
+        const href = node.getAttribute("href") || "";
+        const label = inline(node) || href;
+        if (href) out.push("[" + label + "](" + href + ")");
+        else out.push(label);
+        return;
+      }
+      case "img": {
+        const alt = node.getAttribute("alt") || "";
+        const src = node.getAttribute("src") || "";
+        if (src) out.push("![" + alt + "](" + src + ")");
+        return;
+      }
+      case "ul": case "ol": {
+        out.push("\n\n");
+        const ordered = tag === "ol";
+        let i = 1;
+        node.childNodes.forEach(child => {
+          if (child.nodeType === Node.ELEMENT_NODE && child.tagName.toLowerCase() === "li") {
+            const prefix = "  ".repeat(ctx.listDepth) + (ordered ? (i++ + ". ") : "- ");
+            const inner = inline(child).trim();
+            out.push(prefix + inner + "\n");
+            child.querySelectorAll(":scope > ul, :scope > ol").forEach(nested => {
+              walk(nested, out, { listDepth: ctx.listDepth + 1 });
+            });
+          }
+        });
+        out.push("\n");
+        return;
+      }
+      case "table": {
+        out.push("\n\n" + serializeTable(node) + "\n");
+        return;
+      }
+      default: {
+        node.childNodes.forEach(c => walk(c, out, ctx));
+      }
+    }
+  }
+
+  function inline(node) {
+    const out = [];
+    node.childNodes.forEach(c => walk(c, out, { listDepth: 0 }));
+    return out.join("").replace(/\s+/g, " ").trim();
+  }
+
+  function text(node) {
+    return (node.textContent || "").trim();
+  }
+
+  function shouldSkip(node, tag) {
+    if (node.classList && node.classList.contains("tiwy")) return true;
+    if (node.hasAttribute && node.hasAttribute("data-tiwy-skip")) return true;
+    return ["script", "style", "nav", "noscript", "template"].includes(tag);
+  }
+
+  function serializeTable(table) {
+    const rows = Array.from(table.querySelectorAll("tr"));
+    if (!rows.length) return "";
+    const cells = rows.map(r => Array.from(r.children).map(c => inline(c)));
+    const header = cells[0];
+    const sep = header.map(() => "---");
+    const body = cells.slice(1);
+    const lines = [
+      "| " + header.join(" | ") + " |",
+      "| " + sep.join(" | ") + " |",
+      ...body.map(r => "| " + r.join(" | ") + " |"),
+    ];
+    return lines.join("\n");
+  }
+
+  function slugify(s) {
+    return s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "document";
+  }
+
+  function flash(el, msg) {
+    if (!el) return;
+    el.textContent = msg;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.textContent = ""; }, 2500);
+  }
+
+  function fallbackCopy(t) {
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+})();
+</script>
