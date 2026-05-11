@@ -49,19 +49,19 @@ By default it serializes everything inside `<main>`. Override with `data-source=
 
 Skip individual elements by adding `data-tiwy-skip` to them.
 
-### Branding
+### Styling
 
-Default styling is neutral (system fonts, neutral grays). Override with CSS variables:
+Defaults are neutral: system fonts, a soft border, a blue accent on hover. Override any of these with CSS variables on `.tiwy` if you want it to match your site:
 
 ```css
 .tiwy {
-  --tiwy-accent: #F36E59;        /* hover color */
-  --tiwy-text: #231F20;          /* body text */
-  --tiwy-muted: #6A7280;         /* label + status */
-  --tiwy-border: rgba(0,0,0,.12);
-  --tiwy-bg: #ffffff;
-  --tiwy-font: "Open Sans", system-ui, sans-serif;
-  --tiwy-label-font: "Cal Sans", "Open Sans", sans-serif;
+  --tiwy-accent: ...;       /* hover/focus color */
+  --tiwy-text: ...;         /* body text */
+  --tiwy-muted: ...;        /* label + status text */
+  --tiwy-border: ...;       /* container + button border */
+  --tiwy-bg: ...;           /* container background */
+  --tiwy-font: ...;         /* body font */
+  --tiwy-label-font: ...;   /* label font (defaults to --tiwy-font) */
 }
 ```
 
