@@ -4,9 +4,14 @@ A drop-in web snippet that adds a **Copy for LLM** and **Download MD** button to
 
 Vanilla HTML/CSS/JS. No dependencies. No build step. ~3 KB.
 
-```
-TAKE IT WITH YOU   [ ⧉ Copy for LLM ]   [ ↓ Download MD ]
-```
+![The snippet rendered on a page: a small bar reading 'Take It With You' followed by Copy for LLM and Download MD buttons](examples/snippet-preview.png)
+
+<details>
+<summary>See it in context on the demo page</summary>
+
+![Screenshot of the demo.html page showing the snippet mounted at the bottom of an article](examples/screenshot.png)
+
+</details>
 
 ## Why this exists
 

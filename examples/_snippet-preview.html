@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Snippet preview</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #f8f9fb; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { padding: 28px 32px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tiwy" data-source="main">
+      <span class="tiwy__label">TAKE IT WITH YOU</span>
+      <button type="button" class="tiwy__btn" data-action="copy" aria-label="Copy this page as Markdown for an LLM">
+        <span aria-hidden="true">⧉</span> Copy for LLM
+      </button>
+      <button type="button" class="tiwy__btn" data-action="download" aria-label="Download this page as a Markdown file">
+        <span aria-hidden="true">↓</span> Download MD
+      </button>
+      <span class="tiwy__status" role="status" aria-live="polite"></span>
+    </div>
+    <style>
+      .tiwy {
+        --tiwy-accent: #2563eb; --tiwy-text: #1f2937; --tiwy-muted: #6b7280;
+        --tiwy-border: rgba(0,0,0,0.12); --tiwy-bg: #ffffff;
+        --tiwy-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+        --tiwy-label-font: var(--tiwy-font);
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        padding: 16px 20px; margin: 0;
+        border: 1px solid var(--tiwy-border); border-radius: 10px;
+        font-family: var(--tiwy-font); color: var(--tiwy-text); background: var(--tiwy-bg);
+      }
+      .tiwy__label {
+        font-family: var(--tiwy-label-font); font-size: 13px;
+        letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--tiwy-muted); margin-right: 4px;
+      }
+      .tiwy__btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 14px; border: 1px solid var(--tiwy-border);
+        border-radius: 6px; background: var(--tiwy-bg); color: var(--tiwy-text);
+        font: inherit; font-size: 14px; cursor: pointer;
+      }
+      .tiwy__status { font-size: 13px; color: var(--tiwy-muted); min-height: 1em; }
+    </style>
+  </div>
+</body>
+</html>
